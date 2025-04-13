@@ -1,0 +1,91 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using Blazored.LocalStorage
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@rendermode InteractiveServer
+
+<div class="flex items-center justify-center h-screen">
+    <div class="card w-full max-w-md">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h1>
+        <EditForm FormName="login" Model="@loginModel" OnValidSubmit="HandleLogin" class="space-y-4">
+            <DataAnnotationsValidator />
+            <div>
+                <label class="block text-gray-600">Username</label>
+                <InputText @bind-Value="loginModel.Username" class="w-full p-2 border rounded-md" />
+                <ValidationMessage For="@(() => loginModel.Username)" />
+            </div>
+            <div>
+                <label class="block text-gray-600">Password</label>
+                <InputText type="password" @bind-Value="loginModel.Password" class="w-full p-2 border rounded-md" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+            <button type="submit" class="btn btn-primary w-full">Login</button>
+        </EditForm>
+        <p class="mt-4 text-center text-gray-600">
+            Don't have an account? <a href="/register" class="text-blue-600 hover:underline">Register</a>
+        </p>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="mt-4 text-red-600 text-center">@errorMessage</p>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm] 
+    private LoginModel loginModel { get; set; } = new();
+    private string errorMessage = string.Empty;
+    private string tokenToSave = null; // Временное хранение токена
+    private bool shouldNavigate = false; // Флаг для навигации
+
+    private class LoginModel
+    {
+        [Required]
+        public string Username { get; set; } = string.Empty;
+        [Required]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            var response = await client.PostAsJsonAsync("api/auth/login", loginModel);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result?.Token);
+                tokenToSave = result.Token; // Сохраняем токен для обработки в OnAfterRenderAsync
+                shouldNavigate = true; // Устанавливаем флаг для навигации
+            }
+            else
+            {
+                errorMessage = "Invalid credentials. Please try again.";
+            }
+        }
+        catch
+        {
+            errorMessage = "An error occurred. Please try again later.";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (tokenToSave != null)
+        {
+            await LocalStorage.SetItemAsync("authToken", tokenToSave); // Сохраняем токен
+            tokenToSave = null; // Очищаем временную переменную
+
+            if (shouldNavigate)
+            {
+                Navigation.NavigateTo("/"); // Переходим на главную страницу
+                shouldNavigate = false;
+            }
+        }
+    }
+
+    private record LoginResponse(string Token);
+}

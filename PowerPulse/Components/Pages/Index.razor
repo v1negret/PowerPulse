@@ -1,0 +1,132 @@
+@page "/"
+@using System.ComponentModel.DataAnnotations
+@using Blazored.LocalStorage
+@inject IHttpClientFactory HttpClientFactory
+@inject ILocalStorageService LocalStorage
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-800">Energy Consumption Dashboard</h1>
+        @if (IsAuthenticated)
+        {
+            <button @onclick="ShowAddReadingModal" class="btn btn-primary">Add Meter Reading</button>
+        }
+    </div>
+
+    @if (IsAuthenticated)
+    {
+        <div class="card">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Consumption Graphs</h2>
+            <iframe src="http://localhost:3000/d/your-grafana-dashboard" class="w-full h-[600px] border-0"></iframe>
+        </div>
+    }
+    else
+    {
+        <div class="card text-center">
+            <p class="text-gray-600">Please <a href="/login" class="text-blue-600 hover:underline">login</a> to view your dashboard.</p>
+        </div>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Add Meter Reading</h2>
+            <EditForm FormName="index" Model="@meterReadingModel" OnValidSubmit="HandleAddReading" class="space-y-4">
+                <DataAnnotationsValidator />
+                <div>
+                    <label class="block text-gray-600">Date</label>
+                    <InputDate @bind-Value="meterReadingModel.Date" class="w-full p-2 border rounded-md" />
+                    <ValidationMessage For="@(() => meterReadingModel.Date)" />
+                </div>
+                <div>
+                    <label class="block text-gray-600">Reading (kWh)</label>
+                    <InputNumber @bind-Value="meterReadingModel.Reading" class="w-full p-2 border rounded-md" />
+                    <ValidationMessage For="@(() => meterReadingModel.Reading)" />
+                </div>
+                <div>
+                    <label class="block text-gray-600">Cost</label>
+                    <InputNumber @bind-Value="meterReadingModel.Cost" class="w-full p-2 border rounded-md" />
+                    <ValidationMessage For="@(() => meterReadingModel.Cost)" />
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" @onclick="HideAddReadingModal" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </EditForm>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <p class="mt-4 text-red-600">@errorMessage</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool IsAuthenticated { get; set; }
+    private bool showModal;
+    [SupplyParameterFromForm]
+    private MeterReadingModel meterReadingModel { get; set; } = new();
+    private string errorMessage = string.Empty;
+
+    private class MeterReadingModel
+    {
+        [Required]
+        public DateTime Date { get; set; } = DateTime.Now;
+        [Required, Range(0, double.MaxValue)]
+        public double Reading { get; set; }
+        [Required, Range(0, double.MaxValue)]
+        public decimal Cost { get; set; }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            IsAuthenticated = !string.IsNullOrEmpty(token);
+            if (IsAuthenticated)
+            {
+                var client = HttpClientFactory.CreateClient("ApiClient");
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void ShowAddReadingModal()
+    {
+        showModal = true;
+        meterReadingModel = new MeterReadingModel();
+        errorMessage = string.Empty;
+    }
+
+    private void HideAddReadingModal()
+    {
+        showModal = false;
+    }
+
+    private async Task HandleAddReading()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            var response = await client.PostAsJsonAsync("api/consumption/meter-reading", meterReadingModel);
+            if (response.IsSuccessStatusCode)
+            {
+                showModal = false;
+            }
+            else
+            {
+                errorMessage = "Failed to add meter reading. Please try again.";
+            }
+        }
+        catch
+        {
+            errorMessage = "An error occurred. Please try again later.";
+        }
+    }
+}

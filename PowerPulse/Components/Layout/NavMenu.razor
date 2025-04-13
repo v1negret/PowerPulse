@@ -1,0 +1,44 @@
+﻿@using Blazored.LocalStorage
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject ILocalStorageService LocalStorage
+@rendermode InteractiveServer
+
+<div class="bg-blue-600 text-white py-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <a href="/" class="text-xl font-bold">PowerPulse</a>
+        <div class="space-x-4">
+            @if (IsAuthenticated)
+            {
+                <a href="/" class="hover:underline">Home</a>
+                <button @onclick="Logout" class="btn btn-secondary">Logout</button>
+            }
+            else
+            {
+                <a href="/login" class="hover:underline">Login</a>
+                <a href="/register" class="hover:underline">Register</a>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool IsAuthenticated { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            IsAuthenticated = !string.IsNullOrEmpty(token);
+            StateHasChanged(); // Обновляем UI после изменения состояния
+        }
+    }
+
+    private async Task Logout()
+    {
+        await LocalStorage.RemoveItemAsync("authToken");
+        IsAuthenticated = false;
+        Navigation.NavigateTo("/login");
+    }
+}
