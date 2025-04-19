@@ -8,37 +8,37 @@
 
 <div class="flex items-center justify-center h-screen">
     <div class="card w-full max-w-md">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h1>
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">Login</h1>
         <EditForm FormName="login" Model="@loginModel" OnValidSubmit="HandleLogin" class="space-y-4">
             <DataAnnotationsValidator />
             <div>
-                <label class="block text-gray-600">Username</label>
-                <InputText @bind-Value="loginModel.Username" class="w-full p-2 border rounded-md" />
+                <label class="block text-gray-600 dark:text-gray-400">Username</label>
+                <InputText @bind-Value="loginModel.Username" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
                 <ValidationMessage For="@(() => loginModel.Username)" />
             </div>
             <div>
-                <label class="block text-gray-600">Password</label>
-                <InputText type="password" @bind-Value="loginModel.Password" class="w-full p-2 border rounded-md" />
+                <label class="block text-gray-600 dark:text-gray-400">Password</label>
+                <InputText type="password" @bind-Value="loginModel.Password" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
                 <ValidationMessage For="@(() => loginModel.Password)" />
             </div>
             <button type="submit" class="btn btn-primary w-full">Login</button>
         </EditForm>
-        <p class="mt-4 text-center text-gray-600">
-            Don't have an account? <a href="/register" class="text-blue-600 hover:underline">Register</a>
+        <p class="mt-4 text-center text-gray-600 dark:text-gray-400">
+            Don't have an account? <a href="/register" class="text-blue-600 hover:underline dark:text-blue-400">Register</a>
         </p>
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <p class="mt-4 text-red-600 text-center">@errorMessage</p>
+            <p class="mt-4 text-red-600 dark:text-red-400 text-center">@errorMessage</p>
         }
     </div>
 </div>
 
 @code {
-    [SupplyParameterFromForm] 
+    [SupplyParameterFromForm]
     private LoginModel loginModel { get; set; } = new();
     private string errorMessage = string.Empty;
-    private string tokenToSave = null; // Временное хранение токена
-    private bool shouldNavigate = false; // Флаг для навигации
+    private string tokenToSave = null;
+    private bool shouldNavigate = false;
 
     private class LoginModel
     {
@@ -57,9 +57,9 @@
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result?.Token);
-                tokenToSave = result.Token; // Сохраняем токен для обработки в OnAfterRenderAsync
-                shouldNavigate = true; // Устанавливаем флаг для навигации
+                tokenToSave = result.Token;
+                shouldNavigate = true;
+                StateHasChanged();
             }
             else
             {
@@ -76,12 +76,12 @@
     {
         if (tokenToSave != null)
         {
-            await LocalStorage.SetItemAsync("authToken", tokenToSave); // Сохраняем токен
-            tokenToSave = null; // Очищаем временную переменную
+            await LocalStorage.SetItemAsync("authToken", tokenToSave);
+            tokenToSave = null;
 
             if (shouldNavigate)
             {
-                Navigation.NavigateTo("/"); // Переходим на главную страницу
+                Navigation.NavigateTo("/", forceLoad: true); // forceLoad обновляет страницу
                 shouldNavigate = false;
             }
         }

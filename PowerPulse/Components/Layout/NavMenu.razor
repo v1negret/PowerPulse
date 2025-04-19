@@ -1,22 +1,37 @@
 ﻿@using Blazored.LocalStorage
+@using PowerPulse.Services
 @inject NavigationManager Navigation
-@inject HttpClient Http
 @inject ILocalStorageService LocalStorage
+@inject IJSRuntime JSRuntime
+@inject ThemeService ThemeService
 @rendermode InteractiveServer
 
-<div class="bg-blue-600 text-white py-4">
+<div class="nav-menu">
     <div class="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-        <a href="/" class="text-xl font-bold">PowerPulse</a>
-        <div class="flex space-x-4">
+        <a href="/">
+            <img src="/white-logo.svg" alt="PowerPulse Logo" class="h-6 w-auto" />
+        </a>
+        <div class="flex space-x-4 items-center">
             @if (IsAuthenticated)
             {
-                <button @onclick="Logout" class="btn btn-secondary">Выйти</button>
+                <a href="/" class="hover:underline">Home</a>
+                <button @onclick="Logout" class="btn btn-secondary">Logout</button>
             }
             else
             {
-                <a href="/login" class="hover:underline">Войти</a>
-                <a href="/register" class="hover:underline">Зарегестрироваться</a>
+                <a href="/login" class="hover:underline">Login</a>
+                <a href="/register" class="hover:underline">Register</a>
             }
+            <button @onclick="ToggleTheme" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                @if (ThemeService.IsDarkTheme)
+                {
+                    <span>☀️ Light</span>
+                }
+                else
+                {
+                    <span>🌙 Dark</span>
+                }
+            </button>
         </div>
     </div>
 </div>
@@ -24,11 +39,39 @@
 @code {
     private bool IsAuthenticated { get; set; }
 
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await UpdateAuthState();
         if (firstRender)
         {
-            await UpdateAuthState();
+            await ThemeService.InitializeAsync();
+            await UpdateThemeClass();
+            ThemeService.OnThemeChanged += async () =>
+            {
+                await UpdateThemeClass();
+                StateHasChanged();
+            };
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        await ThemeService.ToggleThemeAsync();
+    }
+
+    private async Task UpdateThemeClass()
+    {
+        if (ThemeService.IsDarkTheme)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.documentElement.classList.add('dark')");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.documentElement.classList.remove('dark')");
         }
     }
 
@@ -47,7 +90,6 @@
         Navigation.NavigateTo("/login");
     }
 
-    // Подписываемся на событие навигации, чтобы обновлять состояние при входе
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += async (sender, args) =>

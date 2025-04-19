@@ -7,6 +7,7 @@ using PowerPulse.Components;
 using PowerPulse.Infrastructure.Data;
 using PowerPulse.Modules.Authentication.Services;
 using PowerPulse.Modules.EnergyConsumption.Services;
+using PowerPulse.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(opt => opt.ListenAnyIP(5087));
@@ -38,6 +39,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ConsumptionService>();
+builder.Services.AddScoped<ThemeService>();
 
 builder.Services.AddDbContext<EnergyDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));

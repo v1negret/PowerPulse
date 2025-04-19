@@ -1,5 +1,7 @@
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./**/*.{razor,cshtml,html}"],
+  darkMode: 'class', // Используем класс для переключения тем
   theme: {
     extend: {},
     screens: {
