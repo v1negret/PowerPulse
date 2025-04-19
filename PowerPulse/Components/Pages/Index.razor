@@ -7,25 +7,34 @@
 @rendermode InteractiveServer
 
 <div class="space-y-6">
-    <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold text-gray-800">Energy Consumption Dashboard</h1>
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <h1 class="text-3xl font-bold text-gray-800">Дашборды энергопотребления</h1>
         @if (IsAuthenticated)
         {
-            <button @onclick="ShowAddReadingModal" class="btn btn-primary">Add Meter Reading</button>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <button @onclick="ShowAddReadingModal" class="btn btn-primary w-full sm:w-auto">Добавить показания</button>
+                <select @bind="SelectedYear" class="p-2 border rounded-md w-full sm:w-auto">
+                    @for (int year = DateTime.Now.Year - 5; year <= DateTime.Now.Year + 1; year++)
+                    {
+                        <option value="@year">@year</option>
+                    }
+                </select>
+                <button @onclick="RefreshDashboard" class="btn btn-secondary w-full sm:w-auto">Обновить</button>
+            </div>
         }
     </div>
 
     @if (IsAuthenticated)
     {
         <div class="card">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Consumption Graphs</h2>
-            <iframe src="http://localhost:3000/d/your-grafana-dashboard" class="w-full h-[600px] border-0"></iframe>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Графики потребления</h2>
+            <iframe src="@GetDashboardUrl()" class="w-full h-[400px] sm:h-[600px] border-0" @key="refreshKey"></iframe>
         </div>
     }
     else
     {
         <div class="card text-center">
-            <p class="text-gray-600">Please <a href="/login" class="text-blue-600 hover:underline">login</a> to view your dashboard.</p>
+            <p class="text-gray-600">Пожалуйста, <a href="/login" class="text-blue-600 hover:underline">войдите</a>, чтобы просмотреть дашборд.</p>
         </div>
     }
 </div>
@@ -34,27 +43,27 @@
 {
     <div class="modal-overlay">
         <div class="modal-content">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Add Meter Reading</h2>
-            <EditForm FormName="index" Model="@meterReadingModel" OnValidSubmit="HandleAddReading" class="space-y-4">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Добавить показания</h2>
+            <EditForm Model="@meterReadingModel" OnValidSubmit="HandleAddReading" class="space-y-4">
                 <DataAnnotationsValidator />
                 <div>
-                    <label class="block text-gray-600">Date</label>
+                    <label class="block text-gray-600">Дата</label>
                     <InputDate @bind-Value="meterReadingModel.Date" class="w-full p-2 border rounded-md" />
                     <ValidationMessage For="@(() => meterReadingModel.Date)" />
                 </div>
                 <div>
-                    <label class="block text-gray-600">Reading (kWh)</label>
+                    <label class="block text-gray-600">Показания (кВт·ч)</label>
                     <InputNumber @bind-Value="meterReadingModel.Reading" class="w-full p-2 border rounded-md" />
                     <ValidationMessage For="@(() => meterReadingModel.Reading)" />
                 </div>
                 <div>
-                    <label class="block text-gray-600">Cost</label>
+                    <label class="block text-gray-600">Стоимость</label>
                     <InputNumber @bind-Value="meterReadingModel.Cost" class="w-full p-2 border rounded-md" />
                     <ValidationMessage For="@(() => meterReadingModel.Cost)" />
                 </div>
                 <div class="flex justify-end space-x-2">
-                    <button type="button" @onclick="HideAddReadingModal" class="btn btn-secondary">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button type="button" @onclick="HideAddReadingModal" class="btn btn-secondary">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Отправить</button>
                 </div>
             </EditForm>
             @if (!string.IsNullOrEmpty(errorMessage))
@@ -66,11 +75,15 @@
 }
 
 @code {
+    private string CurrentUserId { get; set; } = "user";
     private bool IsAuthenticated { get; set; }
     private bool showModal;
     [SupplyParameterFromForm]
-    private MeterReadingModel meterReadingModel { get; set; } = new();
+    private MeterReadingModel meterReadingModel { get; set; }
     private string errorMessage = string.Empty;
+    private HttpClient _httpClient;
+    private int SelectedYear { get; set; } = DateTime.Now.Year;
+    private Guid refreshKey = Guid.NewGuid();
 
     private class MeterReadingModel
     {
@@ -82,6 +95,13 @@
         public decimal Cost { get; set; }
     }
 
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _httpClient = HttpClientFactory.CreateClient("ApiClient");
+        meterReadingModel ??= new MeterReadingModel();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -90,11 +110,23 @@
             IsAuthenticated = !string.IsNullOrEmpty(token);
             if (IsAuthenticated)
             {
-                var client = HttpClientFactory.CreateClient("ApiClient");
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                CurrentUserId = (await (await _httpClient.GetAsync("api/Auth/user-uid")).Content.ReadAsStringAsync()).Replace("\"", "");
             }
             StateHasChanged();
         }
+    }
+
+    private string GetDashboardUrl()
+    {
+        var from = new DateTime(SelectedYear, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
+        var to = new DateTime(SelectedYear, 12, 31, 23, 59, 59, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
+        return $"http://localhost:3000/d/eeisxytgvyuwwb/powerpulse?orgId=1&from={from}&to={to}&var-user_id={CurrentUserId}&var-time_bucket_interval=1m&kiosk&theme=light";
+    }
+
+    private void RefreshDashboard()
+    {
+        refreshKey = Guid.NewGuid();
     }
 
     private void ShowAddReadingModal()
@@ -113,20 +145,20 @@
     {
         try
         {
-            var client = HttpClientFactory.CreateClient("ApiClient");
-            var response = await client.PostAsJsonAsync("api/consumption/meter-reading", meterReadingModel);
+            var response = await _httpClient.PostAsJsonAsync("api/consumption/meter-reading", meterReadingModel);
             if (response.IsSuccessStatusCode)
             {
                 showModal = false;
+                RefreshDashboard();
             }
             else
             {
-                errorMessage = "Failed to add meter reading. Please try again.";
+                errorMessage = "Не удалось добавить показания. Попробуйте снова.";
             }
         }
         catch
         {
-            errorMessage = "An error occurred. Please try again later.";
+            errorMessage = "Произошла ошибка. Попробуйте снова позже.";
         }
     }
 }

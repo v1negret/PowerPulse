@@ -5,18 +5,17 @@
 @rendermode InteractiveServer
 
 <div class="bg-blue-600 text-white py-4">
-    <div class="container mx-auto flex justify-between items-center">
+    <div class="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
         <a href="/" class="text-xl font-bold">PowerPulse</a>
-        <div class="space-x-4">
+        <div class="flex space-x-4">
             @if (IsAuthenticated)
             {
-                <a href="/" class="hover:underline">Home</a>
-                <button @onclick="Logout" class="btn btn-secondary">Logout</button>
+                <button @onclick="Logout" class="btn btn-secondary">Выйти</button>
             }
             else
             {
-                <a href="/login" class="hover:underline">Login</a>
-                <a href="/register" class="hover:underline">Register</a>
+                <a href="/login" class="hover:underline">Войти</a>
+                <a href="/register" class="hover:underline">Зарегестрироваться</a>
             }
         </div>
     </div>
@@ -29,16 +28,39 @@
     {
         if (firstRender)
         {
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
-            IsAuthenticated = !string.IsNullOrEmpty(token);
-            StateHasChanged(); // Обновляем UI после изменения состояния
+            await UpdateAuthState();
         }
+    }
+
+    private async Task UpdateAuthState()
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        IsAuthenticated = !string.IsNullOrEmpty(token);
+        StateHasChanged();
     }
 
     private async Task Logout()
     {
         await LocalStorage.RemoveItemAsync("authToken");
         IsAuthenticated = false;
+        StateHasChanged();
         Navigation.NavigateTo("/login");
+    }
+
+    // Подписываемся на событие навигации, чтобы обновлять состояние при входе
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += async (sender, args) =>
+        {
+            await UpdateAuthState();
+        };
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= async (sender, args) =>
+        {
+            await UpdateAuthState();
+        };
     }
 }

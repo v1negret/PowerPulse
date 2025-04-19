@@ -21,6 +21,7 @@ public class ConsumptionController : ControllerBase
     [HttpPost("meter-reading")]
     public async Task<IActionResult> AddMeterReading([FromBody]MeterReadingModel model)
     {
+        model.Date = model.Date.ToUniversalTime();
         var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
         await _consumptionService.AddMeterReading(userId, model.Date, model.Reading, model.Cost);
         return Ok();

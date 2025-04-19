@@ -48,6 +48,13 @@ public class AuthService
             return users;
         }
 
+        public async Task<Guid?> GetUserUidByUsername(string? username)
+        {
+            var uid = await _context.Users.Where(u => u.Username.Equals(username)).Select(u => u.Id)
+                .FirstOrDefaultAsync();
+            return uid;
+        } 
+
         private string GenerateJwtToken(User user)
         {
             var claims = new[]

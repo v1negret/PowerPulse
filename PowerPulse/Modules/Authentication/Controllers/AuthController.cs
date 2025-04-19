@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PowerPulse.Modules.Authentication.Models;
 using PowerPulse.Modules.Authentication.Services;
@@ -49,6 +50,30 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             return Unauthorized(ex.Message);
+        }
+    }
+
+    [HttpGet("user-uid")]
+    [Authorize]
+    public async Task<IActionResult> GetCurrentUserUid()
+    {
+        try
+        {
+            var user = HttpContext.User;
+            if (user.Identity is null)
+                return Unauthorized();
+            
+            var username = user.Claims.FirstOrDefault(x => x.Type == "name")?.Value;
+            var uid = await _authService.GetUserUidByUsername(username);
+            if(uid is null)
+                return Unauthorized();
+            
+            return Ok(uid);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
         }
     }
 }
