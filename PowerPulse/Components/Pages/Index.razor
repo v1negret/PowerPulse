@@ -6,6 +6,7 @@
 @inject ILocalStorageService LocalStorage
 @inject NavigationManager Navigation
 @inject ThemeService ThemeService
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <div class="space-y-6">
@@ -22,6 +23,7 @@
                     }
                 </select>
                 <button @onclick="RefreshDashboard" class="btn btn-secondary w-full sm:w-auto">Обновить</button>
+                <button @onclick="ExportReport" class="btn btn-secondary w-full sm:w-auto">Выгрузить отчёт</button>
             </div>
         }
     </div>
@@ -132,7 +134,7 @@
         var from = new DateTime(SelectedYear, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
         var to = new DateTime(SelectedYear, 12, 31, 23, 59, 59, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
         var theme = ThemeService.IsDarkTheme ? "dark" : "light";
-        return $"http://localhost:3000/d/eeisxytgvyuwwb/powerpulse?orgId=1&from={from}&to={to}&var-user_id={CurrentUserId}&var-time_bucket_interval=1m&kiosk&theme={theme}";
+        return $"http://192.168.1.100:3000/d/eeisxytgvyuwwb/powerpulse?orgId=1&from={from}&to={to}&var-user_id={CurrentUserId}&var-time_bucket_interval=1m&kiosk&theme={theme}";
     }
 
     private void RefreshDashboard()
@@ -170,6 +172,29 @@
         catch
         {
             errorMessage = "Произошла ошибка. Попробуйте снова позже.";
+        }
+    }
+    
+    private async Task ExportReport()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"api/report/generate/{SelectedYear}");
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(fileBytes);
+                await JSRuntime.InvokeVoidAsync("downloadFile", $"EnergyReport_{SelectedYear}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Ошибка при генерации отчёта: {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка: {ex.Message}";
         }
     }
 }

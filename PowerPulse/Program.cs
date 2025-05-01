@@ -7,6 +7,7 @@ using PowerPulse.Components;
 using PowerPulse.Infrastructure.Data;
 using PowerPulse.Modules.Authentication.Services;
 using PowerPulse.Modules.EnergyConsumption.Services;
+using PowerPulse.Modules.Report.Services;
 using PowerPulse.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +41,7 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ConsumptionService>();
 builder.Services.AddScoped<ThemeService>();
+builder.Services.AddScoped<ReportService>();
 
 builder.Services.AddDbContext<EnergyDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));

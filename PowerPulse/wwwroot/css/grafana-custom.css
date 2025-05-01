@@ -1,0 +1,32 @@
+/* Увеличиваем ширину графиков */
+.grafana-app .panel-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 5px !important;
+}
+
+/* Уменьшаем отступы внутри панелей */
+.grafana-app .graph {
+    padding: 0 !important;
+}
+
+/* Увеличиваем читаемость текста */
+.grafana-app .axis-label {
+    font-size: 12px !important;
+}
+
+/* Скрываем лишние элементы */
+.panel-menu-container {
+    display: none !important;
+}
+
+.panel-title-container {
+    display: none !important;
+}
+
+.grafana-app .navbar,
+.grafana-app .sidemenu,
+.grafana-app .dashboard-header {
+    display: none !important;
+}
