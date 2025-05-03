@@ -14,22 +14,21 @@
         <div class="flex space-x-4 items-center">
             @if (IsAuthenticated)
             {
-                <a href="/" class="hover:underline">Home</a>
-                <button @onclick="Logout" class="btn btn-secondary">Logout</button>
+                <button @onclick="Logout" class="btn btn-secondary">Выйти</button>
             }
             else
             {
-                <a href="/login" class="hover:underline">Login</a>
-                <a href="/register" class="hover:underline">Register</a>
+                <a href="/login" class="hover:underline">Войти</a>
+                <a href="/register" class="hover:underline">Зарегистрироваться</a>
             }
             <button @onclick="ToggleTheme" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                 @if (ThemeService.IsDarkTheme)
                 {
-                    <span>☀️ Light</span>
+                    <span>☀️ Свет</span>
                 }
                 else
                 {
-                    <span>🌙 Dark</span>
+                    <span>🌙 Тьма</span>
                 }
             </button>
         </div>

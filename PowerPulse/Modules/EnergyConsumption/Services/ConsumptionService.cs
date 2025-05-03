@@ -21,6 +21,7 @@ public class ConsumptionService
             Date = date,
             Reading = reading,
             Cost = cost,
+            CreateDate = DateTime.UtcNow
         };
         _context.MeterReadings.Add(meterReading);
         await _context.SaveChangesAsync();

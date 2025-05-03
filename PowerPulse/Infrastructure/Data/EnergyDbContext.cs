@@ -3,14 +3,19 @@ using PowerPulse.Core.Entities;
 
 namespace PowerPulse.Infrastructure.Data;
 
-public class EnergyDbContext : DbContext
+public sealed class EnergyDbContext : DbContext
 {
     public EnergyDbContext(DbContextOptions<EnergyDbContext> options) : base(options)
     {
+        Database.EnsureCreated();
     }
 
     public DbSet<User> Users { get; set; }
     public DbSet<MeterReading> MeterReadings { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

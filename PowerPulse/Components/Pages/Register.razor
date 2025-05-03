@@ -1,16 +1,17 @@
 @page "/register"
 @using System.ComponentModel.DataAnnotations
+@using PowerPulse.Modules.Authentication.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
 <div class="flex items-center justify-center h-screen">
     <div class="card w-full max-w-md">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Register</h1>
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Регистрация</h1>
         <EditForm FormName="register" Model="@registerModel" OnValidSubmit="HandleRegister" class="space-y-4">
             <DataAnnotationsValidator />
             <div>
-                <label class="block text-gray-600">Username</label>
+                <label class="block text-gray-600">Псевдоним</label>
                 <InputText @bind-Value="registerModel.Username" class="w-full p-2 border rounded-md" />
                 <ValidationMessage For="@(() => registerModel.Username)" />
             </div>
@@ -20,14 +21,19 @@
                 <ValidationMessage For="@(() => registerModel.Email)" />
             </div>
             <div>
-                <label class="block text-gray-600">Password</label>
+                <label class="block text-gray-600">Пароль</label>
                 <InputText type="password" @bind-Value="registerModel.Password" class="w-full p-2 border rounded-md" />
                 <ValidationMessage For="@(() => registerModel.Password)" />
             </div>
-            <button type="submit" class="btn btn-primary w-full">Register</button>
+            <div>
+                <label class="block text-gray-600">Подтвердите пароль</label>
+                <InputText type="password" @bind-Value="registerModel.ConfirmPassword" class="w-full p-2 border rounded-md" />
+                <ValidationMessage For="@(() => registerModel.Password)" />
+            </div>
+            <button type="submit" class="btn btn-primary w-full">Зарегистрироваться</button>
         </EditForm>
         <p class="mt-4 text-center text-gray-600">
-            Already have an account? <a href="/login" class="text-blue-600 hover:underline">Login</a>
+            Уже есть аккаунт? <a href="/login" class="text-blue-600 hover:underline">Войдите</a>
         </p>
         @if (!string.IsNullOrEmpty(errorMessage))
         {
@@ -39,16 +45,6 @@
 @code {
     [SupplyParameterFromForm] private RegisterModel registerModel { get; set; } = new();
     private string errorMessage = string.Empty;
-
-    private class RegisterModel
-    {
-        [Required]
-        public string Username { get; set; } = string.Empty;
-        [Required, EmailAddress]
-        public string Email { get; set; } = string.Empty;
-        [Required]
-        public string Password { get; set; } = string.Empty;
-    }
 
     private async Task HandleRegister()
     {
@@ -62,12 +58,12 @@
             }
             else
             {
-                errorMessage = "Registration failed. Username or email may already exist.";
+                errorMessage = await response.Content.ReadAsStringAsync();
             }
         }
         catch
         {
-            errorMessage = "An error occurred. Please try again later.";
+            errorMessage = "Произошла ошибка. Попробуйте ещё раз позже";
         }
     }
 }

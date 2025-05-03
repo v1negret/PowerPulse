@@ -33,6 +33,9 @@ namespace PowerPulse.Migrations
                     b.Property<decimal>("Cost")
                         .HasColumnType("numeric");
 
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<double>("Reading")
                         .HasColumnType("double precision");
 
@@ -50,6 +53,15 @@ namespace PowerPulse.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("EmailConfirmationToken")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsEmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LastReminderSentDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()

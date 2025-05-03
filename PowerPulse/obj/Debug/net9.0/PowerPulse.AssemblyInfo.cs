@@ -12,11 +12,11 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("PowerPulse")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0+853d235b1e363fbef60b615392c50e77cbaeea71")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.2.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.2.0+183dd373aef35cdcac2b0b21265aed119f243929")]
 [assembly: System.Reflection.AssemblyProductAttribute("PowerPulse")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PowerPulse")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.1.0.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.2.0.0")]
 
 // Создано классом WriteCodeFragment MSBuild.
 

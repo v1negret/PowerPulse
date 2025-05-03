@@ -6,13 +6,15 @@ using Microsoft.IdentityModel.Tokens;
 using PowerPulse.Components;
 using PowerPulse.Infrastructure.Data;
 using PowerPulse.Modules.Authentication.Services;
+using PowerPulse.Modules.Email.Services;
 using PowerPulse.Modules.EnergyConsumption.Services;
 using PowerPulse.Modules.Report.Services;
 using PowerPulse.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.ConfigureKestrel(opt => opt.ListenAnyIP(5087));
-
+#if DEBUG
+    builder.WebHost.ConfigureKestrel(opt => opt.ListenAnyIP(80));
+#endif
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -42,6 +44,10 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ConsumptionService>();
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<ReportService>();
+
+builder.Services.AddTransient<EmailSenderService>();
+
+builder.Services.AddHostedService<ReminderService>();
 
 builder.Services.AddDbContext<EnergyDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));

@@ -1,6 +1,6 @@
 @page "/login"
-@using System.ComponentModel.DataAnnotations
 @using Blazored.LocalStorage
+@using PowerPulse.Modules.Authentication.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
@@ -8,23 +8,23 @@
 
 <div class="flex items-center justify-center h-screen">
     <div class="card w-full max-w-md">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">Login</h1>
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">Вход</h1>
         <EditForm FormName="login" Model="@loginModel" OnValidSubmit="HandleLogin" class="space-y-4">
             <DataAnnotationsValidator />
             <div>
-                <label class="block text-gray-600 dark:text-gray-400">Username</label>
+                <label class="block text-gray-600 dark:text-gray-400">Псевдоним</label>
                 <InputText @bind-Value="loginModel.Username" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
                 <ValidationMessage For="@(() => loginModel.Username)" />
             </div>
             <div>
-                <label class="block text-gray-600 dark:text-gray-400">Password</label>
+                <label class="block text-gray-600 dark:text-gray-400">Пароль</label>
                 <InputText type="password" @bind-Value="loginModel.Password" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
                 <ValidationMessage For="@(() => loginModel.Password)" />
             </div>
-            <button type="submit" class="btn btn-primary w-full">Login</button>
+            <button type="submit" class="btn btn-primary w-full">Войти</button>
         </EditForm>
         <p class="mt-4 text-center text-gray-600 dark:text-gray-400">
-            Don't have an account? <a href="/register" class="text-blue-600 hover:underline dark:text-blue-400">Register</a>
+            Нет аккаунта? <a href="/register" class="text-blue-600 hover:underline dark:text-blue-400">Зарегистрируйтесь</a>
         </p>
         @if (!string.IsNullOrEmpty(errorMessage))
         {
@@ -39,14 +39,6 @@
     private string errorMessage = string.Empty;
     private string tokenToSave = null;
     private bool shouldNavigate = false;
-
-    private class LoginModel
-    {
-        [Required]
-        public string Username { get; set; } = string.Empty;
-        [Required]
-        public string Password { get; set; } = string.Empty;
-    }
 
     private async Task HandleLogin()
     {

@@ -24,11 +24,11 @@ public class AuthController : ControllerBase
             var existingUsers = await _authService.GetUsersByUsernameAndEmail(model.Username, model.Email);
             if (existingUsers.Any(u => u.Username == model.Username))
             {
-                return BadRequest("Username already exists");
+                return BadRequest("Псевдоним уже занят. Попробуйте выбрать другой.");
             }
             if (existingUsers.Any(u => u.Email == model.Email))
             {
-                return BadRequest("Email already exists");
+                return BadRequest("Пользователь с данным Email уже зарегистрирован");
             }
             var user = await _authService.Register(model.Username, model.Email, model.Password);
             return Ok(new { user.Id, user.Username });
@@ -75,5 +75,14 @@ public class AuthController : ControllerBase
             Console.WriteLine(e);
             throw;
         }
+    }
+    [HttpGet("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail(string token)
+    {
+        var conf = await _authService.ConfirmEmailAsync(token);
+
+        if (!conf)
+            return BadRequest("Не удалось подтвердить электронную почтку");
+        return Ok("Электронная почта подтверждена");
     }
 }
