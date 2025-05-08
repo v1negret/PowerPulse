@@ -1,8 +1,8 @@
 @page "/register"
-@using System.ComponentModel.DataAnnotations
 @using PowerPulse.Modules.Authentication.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <div class="flex items-center justify-center h-screen">
@@ -45,6 +45,12 @@
 @code {
     [SupplyParameterFromForm] private RegisterModel registerModel { get; set; } = new();
     private string errorMessage = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JSRuntime.InvokeVoidAsync("updateTheme");
+        await base.OnAfterRenderAsync(firstRender);
+    }
 
     private async Task HandleRegister()
     {

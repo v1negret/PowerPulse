@@ -1,10 +1,9 @@
 @page "/"
 @using System.ComponentModel.DataAnnotations
 @using Blazored.LocalStorage
-@using PowerPulse.Services
+@using PowerPulse.Modules.EnergyConsumption.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject ILocalStorageService LocalStorage
-@inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
@@ -60,10 +59,25 @@
                     <ValidationMessage For="@(() => meterReadingModel.Reading)" />
                 </div>
                 <div>
-                    <label class="block text-gray-600 dark:text-gray-400">Стоимость</label>
-                    <InputNumber @bind-Value="meterReadingModel.Cost" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
-                    <ValidationMessage For="@(() => meterReadingModel.Cost)" />
+                    <InputCheckbox @bind-Value="nullableCost"/>
+                    <label class="text-gray-600 dark:text-gray-400">Заполнить без указания цены</label>
                 </div>
+                @if (nullableCost is false)
+                {
+                    <div>
+                        <label class="block text-gray-600 dark:text-gray-400">Стоимость</label>
+                        <InputNumber  @bind-Value="meterReadingModel.Cost" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
+                        <ValidationMessage For="@(() => meterReadingModel.Cost)" />
+                    </div>
+                }
+                else
+                {
+                    meterReadingModel.Cost = 0;
+                    <div>
+                        <label class="block text-gray-600 dark:text-gray-400">Стоимость</label>
+                        <InputNumber disabled @bind-Value="meterReadingModel.Cost" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
+                    </div>
+                }
                 <div class="flex justify-end space-x-2">
                     <button type="button" @onclick="HideAddReadingModal" class="btn btn-secondary">Отмена</button>
                     <button type="submit" class="btn btn-primary">Отправить</button>
@@ -81,22 +95,14 @@
     private string CurrentUserId { get; set; } = "user";
     private bool IsAuthenticated { get; set; }
     private bool showModal;
+    private bool nullableCost = false;
+    private string theme = "light";
     [SupplyParameterFromForm]
     private MeterReadingModel meterReadingModel { get; set; }
     private string errorMessage = string.Empty;
     private HttpClient _httpClient;
     private int SelectedYear { get; set; } = DateTime.Now.Year;
     private Guid refreshKey = Guid.NewGuid();
-
-    private class MeterReadingModel
-    {
-        [Required]
-        public DateTime Date { get; set; } = DateTime.Now;
-        [Required, Range(0, double.MaxValue)]
-        public double Reading { get; set; }
-        [Required, Range(0, double.MaxValue)]
-        public decimal Cost { get; set; }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,9 +113,10 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await JSRuntime.InvokeVoidAsync("updateTheme");
+        theme = await LocalStorage.GetItemAsync<string>("theme");
         if (firstRender)
         {
-            await ThemeService.InitializeAsync();
             var token = await LocalStorage.GetItemAsync<string>("authToken");
             IsAuthenticated = !string.IsNullOrEmpty(token);
             if (IsAuthenticated)
@@ -117,13 +124,6 @@
                 _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                 CurrentUserId = (await (await _httpClient.GetAsync("api/Auth/user-uid")).Content.ReadAsStringAsync()).Replace("\"", "");
             }
-
-            ThemeService.OnThemeChanged += () =>
-            {
-                RefreshDashboard();
-                StateHasChanged();
-            };
-
             StateHasChanged();
         }
     }
@@ -132,12 +132,12 @@
     {
         var from = new DateTime(SelectedYear, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
         var to = new DateTime(SelectedYear, 12, 31, 23, 59, 59, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
-        var theme = ThemeService.IsDarkTheme ? "dark" : "light";
-        return $"http://192.168.1.100:3000/d/eeisxytgvyuwwb/powerpulse?orgId=1&from={from}&to={to}&var-user_id={CurrentUserId}&var-time_bucket_interval=1m&kiosk&theme={theme}";
+        return $"http://192.168.1.101:3000/d/eeisxytgvyuwwb/powerpulse?orgId=1&from={from}&to={to}&var-user_id={CurrentUserId}&var-time_bucket_interval=1m&kiosk&theme={theme}";
     }
 
-    private void RefreshDashboard()
+    private async Task RefreshDashboard()
     {
+        theme = await LocalStorage.GetItemAsync<string>("theme");
         refreshKey = Guid.NewGuid();
     }
 
@@ -157,15 +157,17 @@
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/consumption/meter-reading", meterReadingModel);
+            if (nullableCost)
+                meterReadingModel.Cost = null;
+            var response = await _httpClient.PostAsJsonAsync("api/consumption/meter-readings", meterReadingModel);
             if (response.IsSuccessStatusCode)
             {
                 showModal = false;
-                RefreshDashboard();
+                await RefreshDashboard();
             }
             else
             {
-                errorMessage = "Не удалось добавить показания. Попробуйте снова.";
+                errorMessage = await response.Content.ReadAsStringAsync();
             }
         }
         catch

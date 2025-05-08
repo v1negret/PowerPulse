@@ -1,0 +1,232 @@
+@page "/readings"
+@using System.ComponentModel.DataAnnotations
+@using Blazored.LocalStorage
+@using PowerPulse.Core.Entities
+@using PowerPulse.Modules.EnergyConsumption.Models
+@using PowerPulse.Services
+@inject IHttpClientFactory HttpClientFactory
+@inject ILocalStorageService LocalStorage
+@inject ThemeService ThemeService
+@rendermode InteractiveServer
+
+@if (!IsAuthenticated)
+{
+    <div class="card text-center">
+        <p class="text-gray-600 dark:text-gray-400">Пожалуйста, <a href="/login"
+                                                                   class="text-blue-600 hover:underline dark:text-blue-400">войдите</a>,
+            чтобы просмотреть показания.</p>
+    </div>
+}
+else
+{
+    <div class="space-y-6">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">Список показаний</h1>
+        @if (readings == null)
+        {
+            <p class="text-gray-600 dark:text-gray-400">Загрузка...</p>
+        }
+        else if (!readings.Any())
+        {
+            <p class="text-gray-600 dark:text-gray-400">Нет введённых показаний.</p>
+        }
+        else
+        {
+            <div class="card">
+                <ul class="space-y-4">
+                    @foreach (var reading in readings)
+                    {
+                        <li class="flex flex-col sm:flex-row justify-between items-center p-4 border rounded-md dark:border-gray-600">
+                            @if (editingId == reading.Id)
+                            {
+                                <EditForm Model="@editModel" OnValidSubmit="() => HandleEditReading(reading.Id)"
+                                          class="flex flex-col sm:flex-row gap-2 w-full">
+                                    <DataAnnotationsValidator/>
+                                    <div class="flex-1">
+                                        <label class="block text-gray-600 dark:text-gray-400">Дата</label>
+                                        <InputDate readonly disabled @bind-Value="editModel.Date"
+                                                   class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"/>
+                                        <ValidationMessage For="@(() => editModel.Date)"/>
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="block text-gray-600 dark:text-gray-400">Показания (кВт·ч)</label>
+                                        <InputNumber @bind-Value="editModel.Reading"
+                                                     class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"/>
+                                        <ValidationMessage For="@(() => editModel.Reading)"/>
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="block text-gray-600 dark:text-gray-400">Стоимость</label>
+                                        <InputNumber @bind-Value="editModel.Cost"
+                                                     class="w-full p-2 border rounded-md dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"/>
+                                        <ValidationMessage For="@(() => editModel.Cost)"/>
+                                    </div>
+                                    <div class="flex gap-2 mt-4 sm:mt-0">
+                                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                                        <button type="button" @onclick="CancelEdit" class="btn btn-secondary">Отмена
+                                        </button>
+                                    </div>
+                                </EditForm>
+                            }
+                            else
+                            {
+                                <span class="text-gray-800 dark:text-gray-100">
+                                    @reading.Date.ToString("yyyy-MM-dd"): @reading.Reading кВт·ч, Стоимость: @reading.Cost
+                                </span>
+                                <div class="flex gap-2 mt-2 sm:mt-0">
+                                    <button @onclick="() => StartEdit(reading)" class="btn btn-primary">Редактировать
+                                    </button>
+                                    <button @onclick="() => DeleteReading(reading.Id)" class="btn btn-secondary">
+                                        Удалить
+                                    </button>
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="mt-4 text-red-600 dark:text-red-400">@errorMessage</div>
+
+    @code {
+        private bool IsAuthenticated { get; set; }
+        private List<MeterReading> readings;
+        private HttpClient _httpClient;
+        private string errorMessage = string.Empty;
+        private Guid? editingId;
+        private MeterReadingModel editModel;
+
+        protected override async Task OnInitializedAsync()
+        {
+            _httpClient = HttpClientFactory.CreateClient("ApiClient");
+            editModel = new MeterReadingModel();
+            if (IsAuthenticated)
+            {
+                await LoadReadings();
+            }
+        }
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                var token = await LocalStorage.GetItemAsync<string>("authToken");
+                IsAuthenticated = !string.IsNullOrEmpty(token);
+                if (IsAuthenticated)
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                    await LoadReadings();
+                }
+                StateHasChanged();
+                ThemeService.OnThemeChanged += StateHasChanged;
+            }
+        }
+
+        private async Task CheckAuthentication()
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            IsAuthenticated = !string.IsNullOrEmpty(token);
+            if (IsAuthenticated)
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+        }
+
+        private async Task LoadReadings()
+        {
+            try
+            {
+                readings = await _httpClient.GetFromJsonAsync<List<MeterReading>>("api/consumption/meter-readings");
+            }
+            catch
+            {
+                errorMessage = "Не удалось загрузить показания. Попробуйте снова позже.";
+                readings = new List<MeterReading>();
+            }
+        }
+
+        private async Task DeleteReading(Guid id)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/consumption/meter-readings/remove/{id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    readings.RemoveAll(r => r.Id == id);
+                    errorMessage = string.Empty;
+                }
+                else
+                {
+                    errorMessage = "Не удалось удалить показание. Попробуйте снова.";
+                }
+            }
+            catch
+            {
+                errorMessage = "Произошла ошибка при удалении. Попробуйте снова позже.";
+            }
+
+            StateHasChanged();
+        }
+
+        private void StartEdit(MeterReading reading)
+        {
+            editingId = reading.Id;
+            editModel = new MeterReadingModel
+            {
+                Date = reading.Date,
+                Reading = reading.Reading,
+                Cost = reading.Cost
+            };
+        }
+
+        private void CancelEdit()
+        {
+            editingId = null;
+            editModel = new MeterReadingModel();
+        }
+
+        private async Task HandleEditReading(Guid id)
+        {
+            try
+            {
+                if(!editingId.HasValue)
+                    return;
+                editModel.Id = editingId.Value;
+                var response = await _httpClient.PutAsJsonAsync($"api/consumption/meter-readings/", editModel);
+                if (response.IsSuccessStatusCode)
+                {
+                    var index = readings.FindIndex(r => r.Id == id);
+                    readings[index] = new MeterReading
+                    {
+                        Id = id,
+                        Date = editModel.Date,
+                        Reading = editModel.Reading,
+                        Cost = editModel.Cost
+                    };
+                    editingId = null;
+                    editModel = new MeterReadingModel();
+                    errorMessage = string.Empty;
+                }
+                else
+                {
+                    errorMessage = "Не удалось обновить показание. Попробуйте снова.";
+                }
+            }
+            catch
+            {
+                errorMessage = "Произошла ошибка при обновлении. Попробуйте снова позже.";
+            }
+
+            StateHasChanged();
+        }
+
+        public void Dispose()
+        {
+            ThemeService.OnThemeChanged -= () => StateHasChanged();
+        }
+
+    }
+}

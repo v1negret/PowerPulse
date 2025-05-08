@@ -27,6 +27,6 @@ public sealed class EnergyDbContext : DbContext
 
         modelBuilder.Entity<MeterReading>()
             .ToTable("meter_readings")
-            .HasKey(m => new {m.UserId, m.Date});
+            .HasKey(m => new {m.Id, m.UserId, m.Date});
     }
 }

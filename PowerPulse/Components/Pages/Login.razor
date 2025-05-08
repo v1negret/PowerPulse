@@ -4,6 +4,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <div class="flex items-center justify-center h-screen">
@@ -55,17 +56,18 @@
             }
             else
             {
-                errorMessage = "Invalid credentials. Please try again.";
+                errorMessage = await response.Content.ReadAsStringAsync();
             }
         }
         catch
         {
-            errorMessage = "An error occurred. Please try again later.";
+            errorMessage = "Ошибка. Попробуйте ещё раз через пару минут";
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await JSRuntime.InvokeVoidAsync("updateTheme");
         if (tokenToSave != null)
         {
             await LocalStorage.SetItemAsync("authToken", tokenToSave);

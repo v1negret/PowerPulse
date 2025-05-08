@@ -24,6 +24,9 @@ namespace PowerPulse.Migrations
 
             modelBuilder.Entity("PowerPulse.Core.Entities.MeterReading", b =>
                 {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -39,7 +42,9 @@ namespace PowerPulse.Migrations
                     b.Property<double>("Reading")
                         .HasColumnType("double precision");
 
-                    b.HasKey("UserId", "Date");
+                    b.HasKey("Id", "UserId", "Date");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("meter_readings", (string)null);
                 });

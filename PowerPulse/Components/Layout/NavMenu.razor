@@ -1,9 +1,7 @@
 ﻿@using Blazored.LocalStorage
-@using PowerPulse.Services
+@inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
-@inject IJSRuntime JSRuntime
-@inject ThemeService ThemeService
 @rendermode InteractiveServer
 
 <div class="nav-menu">
@@ -14,6 +12,8 @@
         <div class="flex space-x-4 items-center">
             @if (IsAuthenticated)
             {
+                <a href="/">Дашборд</a>
+                <a href="/readings">Показания</a>
                 <button @onclick="Logout" class="btn btn-secondary">Выйти</button>
             }
             else
@@ -21,16 +21,7 @@
                 <a href="/login" class="hover:underline">Войти</a>
                 <a href="/register" class="hover:underline">Зарегистрироваться</a>
             }
-            <button @onclick="ToggleTheme" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                @if (ThemeService.IsDarkTheme)
-                {
-                    <span>☀️ Свет</span>
-                }
-                else
-                {
-                    <span>🌙 Тьма</span>
-                }
-            </button>
+            <button @onclick="ChangeTheme" class="theme-button p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"></button>
         </div>
     </div>
 </div>
@@ -38,40 +29,10 @@
 @code {
     private bool IsAuthenticated { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await JSRuntime.InvokeVoidAsync("updateTheme");
         await UpdateAuthState();
-        if (firstRender)
-        {
-            await ThemeService.InitializeAsync();
-            await UpdateThemeClass();
-            ThemeService.OnThemeChanged += async () =>
-            {
-                await UpdateThemeClass();
-                StateHasChanged();
-            };
-        }
-    }
-
-    private async Task ToggleTheme()
-    {
-        await ThemeService.ToggleThemeAsync();
-    }
-
-    private async Task UpdateThemeClass()
-    {
-        if (ThemeService.IsDarkTheme)
-        {
-            await JSRuntime.InvokeVoidAsync("eval", "document.documentElement.classList.add('dark')");
-        }
-        else
-        {
-            await JSRuntime.InvokeVoidAsync("eval", "document.documentElement.classList.remove('dark')");
-        }
     }
 
     private async Task UpdateAuthState()
@@ -95,6 +56,11 @@
         {
             await UpdateAuthState();
         };
+    }
+    
+    private async Task ChangeTheme()
+    {
+        await JSRuntime.InvokeVoidAsync("toggleTheme");
     }
 
     public void Dispose()

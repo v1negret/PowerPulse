@@ -35,14 +35,14 @@ public class ReportService
     private async Task<KeyMetricsDto> GetKeyMetricsAsync(Guid userId, DateTime from, DateTime to)
     {
         var metrics = await _context.MeterReadings
-            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to)
+            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to && r.Cost != null)
             .GroupBy(mr => 1)
             .Select(g => new KeyMetricsDto
             {
                 TotalConsumption = g.Sum(r => r.Reading),
-                TotalCost = g.Sum(r => r.Cost),
+                TotalCost = g.Sum(r => (decimal)r.Cost!),
                 AvgConsumption = g.Average(r => r.Reading),
-                AvgCostPerKwh = g.Average(r => r.Cost / (decimal)r.Reading)
+                AvgCostPerKwh = g.Average(r => (decimal)r.Cost! / (decimal)r.Reading)
             })
             .FirstOrDefaultAsync();
 
@@ -52,12 +52,12 @@ public class ReportService
     private async Task<List<TimeSeriesDto>> GetCostPerKwhAsync(Guid userId, DateTime from, DateTime to)
     {
         return await _context.MeterReadings
-            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to)
+            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to && r.Cost != null)
             .GroupBy(r => new { Date = r.Date.Date })
             .Select(g => new TimeSeriesDto
             {
                 Date = g.Key.Date,
-                Value = g.Average(r => (decimal)r.Cost / (decimal)r.Reading)
+                Value = g.Average(r => (decimal)r.Cost! / (decimal)r.Reading)
             })
             .OrderBy(r => r.Date)
             .ToListAsync();
@@ -66,12 +66,12 @@ public class ReportService
     private async Task<List<TimeSeriesDto>> GetTotalCostAsync(Guid userId, DateTime from, DateTime to)
     {
         return await _context.MeterReadings
-            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to)
+            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to && r.Cost != null)
             .GroupBy(r => new { Date = r.Date.Date })
             .Select(g => new TimeSeriesDto
             {
                 Date = g.Key.Date,
-                Value = g.Sum(r => r.Cost)
+                Value = g.Sum(r => (decimal)r.Cost!)
             })
             .OrderBy(r => r.Date)
             .ToListAsync();
