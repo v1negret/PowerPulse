@@ -32,7 +32,7 @@ public class ReportService
         return excelService.GenerateExcelReport(year, keyMetrics, costPerKwh, totalCost, avgConsumption);
     }
 
-    private async Task<KeyMetricsDto> GetKeyMetricsAsync(Guid userId, DateTime from, DateTime to)
+    public async Task<KeyMetricsDto> GetKeyMetricsAsync(Guid userId, DateTime from, DateTime to)
     {
         var metrics = await _context.MeterReadings
             .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to && r.Cost != null)
@@ -52,7 +52,7 @@ public class ReportService
     private async Task<List<TimeSeriesDto>> GetCostPerKwhAsync(Guid userId, DateTime from, DateTime to)
     {
         return await _context.MeterReadings
-            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to && r.Cost != null)
+            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to && r.Cost != null && r.Cost != 0)
             .GroupBy(r => new { Date = r.Date.Date })
             .Select(g => new TimeSeriesDto
             {
@@ -66,7 +66,7 @@ public class ReportService
     private async Task<List<TimeSeriesDto>> GetTotalCostAsync(Guid userId, DateTime from, DateTime to)
     {
         return await _context.MeterReadings
-            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to && r.Cost != null)
+            .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to && r.Cost != null && r.Cost != 0)
             .GroupBy(r => new { Date = r.Date.Date })
             .Select(g => new TimeSeriesDto
             {
@@ -81,11 +81,15 @@ public class ReportService
     {
         return await _context.MeterReadings
             .Where(r => r.UserId == userId && r.Date >= from && r.Date <= to)
-            .GroupBy(r => new { Date = r.Date.Date })
+            .GroupBy(r => new 
+            { 
+                Year = r.Date.Year,
+                Month = r.Date.Month
+            })
             .Select(g => new TimeSeriesDto
             {
-                Date = g.Key.Date,
-                Value = g.Average(r => (decimal)r.Reading)
+                Date = new DateTime(g.Key.Year, g.Key.Month, 1),
+                Value = (decimal)g.Average(r => (decimal?)r.Reading)! // Используем nullable для избежания ошибок
             })
             .OrderBy(r => r.Date)
             .ToListAsync();

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PowerPulse")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+062b9fa6d04046f143ced3bfe52d7386a3be616b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+80485b1f0738c0bb1ea4df4efa74dee4315105ad")]
 [assembly: System.Reflection.AssemblyProductAttribute("PowerPulse")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PowerPulse")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
